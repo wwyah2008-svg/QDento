@@ -1,0 +1,61 @@
+name: Build QDento Android APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Qt 6.8.3 for Android
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.3'
+          host: 'linux'
+          target: 'android'
+          arch: 'android_arm64_v8a'
+          cache: true
+
+      - name: Set Android environment
+        run: |
+          echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/26.1.10909125" >> "$GITHUB_ENV"
+
+      - name: Install Android NDK
+        run: |
+          sdkmanager --install "ndk;26.1.10909125"
+
+      - name: Configure QDento
+        run: |
+          mkdir -p build
+          cd build
+          qmake ../QDento.pro CONFIG+=release ANDROID_ABIS=arm64-v8a
+
+      - name: Build QDento
+        run: |
+          cd build
+          make -j2
+
+      - name: Find deployment settings
+        run: |
+          find build -name '*deployment-settings.json' -print
+
+      - name: Build APK
+        run: |
+          SETTINGS=$(find build -name '*deployment-settings.json' | head -n 1)
+          test -n "$SETTINGS"
+          androiddeployqt \
+            --input "$SETTINGS" \
+            --output build/android-build \
+            --release \
+            --android-platform android-35
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: QDento-Android-arm64
+          path: build/**/*.apk
