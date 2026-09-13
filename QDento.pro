@@ -1,6 +1,6 @@
 #THIS Qt Project file is configured only for building on Linux and MacOS
 
-QT += core gui widgets network networkauth
+QT += core gui widgets network
 
 CONFIG += c++20
 
